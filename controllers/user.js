@@ -69,9 +69,9 @@ exports.signup = (req, res, next) => {
 };
 
 exports.readProfile = (req, res, next) => {
-    Model.User.findOne({ id: req.body.id })
+    Model.User.findOne({where :{ id: req.params.id }})
     .then(User => {
-      if (User.id!=req.body.id) {
+      if (User.id!=req.params.id) {
         return res.status(401).json({ error: 'Utilisateur non trouvé !' });
       }
       else {
@@ -81,17 +81,16 @@ exports.readProfile = (req, res, next) => {
     .catch(error => res.status(501).json({ error }));
 };
 
-exports.updateProfile = (req, res, next) => {
-
+exports.updateProfile = (req, res, next) => {                               //TODO Il y a une erreur dans la console mais la route fonctionne
     try {
+        console.log(res.locals.roleID);
         Model.User.update(
             {username: req.body.username,
                 email: req.body.email,
                 bio: req.body.bio,
                 pictureURL: req.body.pictureURL,
-                creationDate: fullDate,
                 updateDate: fullDate},
-            {where: {id: req.body.id}}
+            {where: {id: req.params.id}}
         ).then(res.status(201).json({ message: 'Utilisateur modifié !' }))  
         //traitement terminé...
         .catch(res.status(401).json({ message: 'Une erreur est apparue !' }));
@@ -101,11 +100,11 @@ exports.updateProfile = (req, res, next) => {
     }
 };
 
-exports.deleteProfile = (req, res, next) => { 
-    try {
-        Model.User.destroy(
-            {where: {id: req.body.id}}
-        ).then(res.status(201).json({ message: 'Utilisateur supprimé !' }))  
+exports.deleteProfile = (req, res, next) => {                               //TODO Il y a une erreur dans la console mais la route fonctionne
+    try {                                                                  
+        console.log(res.locals.roleID);
+        Model.User.destroy({where: {id: req.params.id}})
+        .then(res.status(201).json({ message: 'Utilisateur supprimé !' }))  
         //traitement terminé...
         .catch(res.status(401).json({ message: 'Une erreur est apparue !' }));
         }

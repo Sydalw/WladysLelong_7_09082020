@@ -4,11 +4,11 @@ const auth = require('../middleware/auth');
 
 const userCtrl = require('../controllers/user');
 
-router.get('/users', auth, userCtrl.getAllUsers);
+router.get('/profiles', auth, userCtrl.getAllUsers);
 router.post('/login', userCtrl.login);
 router.post('/signup', userCtrl.signup);
-router.get('/profile', auth, userCtrl.readProfile);
-router.post('/profile/update', auth, userCtrl.updateProfile);
-router.delete('/profile/delete', auth, userCtrl.deleteProfile);
+router.get('/profile/:id', auth, userCtrl.readProfile);
+router.put('/profile/:id', auth, userCtrl.updateProfile);
+router.delete('/profile/:id', auth, userCtrl.deleteProfile);
 
 module.exports = router;
