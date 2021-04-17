@@ -5,7 +5,7 @@ const keyValueToken = process.env.key_value_token;
 
 module.exports = (req, res, next) => {
   try {
-    console.log(req.params.postId);
+    //console.log(req.params.postId);
     const token = req.headers.authorization.split(' ')[1];
     const decodedToken = jwt.verify(token, keyValueToken);
     const decodedUserId = decodedToken.userId;
@@ -13,7 +13,7 @@ module.exports = (req, res, next) => {
     Model.User.findOne({where: { id: req.body.id}})
       .then(User => {
         console.log(User.roleId);
-        if (req.body.id && req.body.id != decodedUserId && User.roleId < 2) {
+        if (req.body.id && req.body.id != decodedUserId) {
           throw 'You dont have rights';
         } else {
           res.locals.roleID = User.roleId;

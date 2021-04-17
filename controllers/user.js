@@ -1,22 +1,20 @@
 //on importe le modèle
 var Model = require('../models/User');
+var modelRole = require('../models/Role');
 const config = require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const keyValueToken = process.env.key_value_token;
 const bcrypt = require('bcrypt');
 const auth = require('../middleware/auth');
-var dayDate = new Date();
-var date = dayDate.getFullYear()+'-'+(dayDate.getMonth()+1)+'-'+dayDate.getDate();
-var hours = dayDate.getHours() + ":" + dayDate.getMinutes() + ":" + dayDate.getSeconds();
-var fullDate = date+' '+hours;
-console.log(fullDate);
+
+//modelRole.Role.hasMany(Model.User);
+//Model.User.belongsTo(modelRole.Role);
 
 //recherche de tous les utilisateurs
 exports.getAllUsers = (req, res, next) => {
-    Model.User.findAll().then(users => {
+    Model.User.findAll({attributes: {exclude: ['password']}}).then(users => {                 
         //on récupère ici un tableau "users" contenant une liste d'utilisateurs
         res.status(200).json(users);
-        console.log(users);
     }).catch(function (e) {
         //gestion erreur
         res.status(400).json(users);
@@ -50,8 +48,11 @@ exports.login = (req, res, next) => {
 exports.signup = (req, res, next) => {
     bcrypt.hash(req.body.password, 10)
         .then(hash => {
-            try {
-                Model.User.create({
+                var dayDate = new Date();
+                var date = dayDate.getFullYear()+'-'+(dayDate.getMonth()+1)+'-'+dayDate.getDate();
+                var hours = dayDate.getHours() + ":" + dayDate.getMinutes() + ":" + dayDate.getSeconds();
+                var fullDate = date+' '+hours;
+                return Model.User.create({
                     username: req.body.username,
                     email: req.body.email,
                     password: hash,
@@ -61,15 +62,16 @@ exports.signup = (req, res, next) => {
                     creationDate: fullDate,
                     updateDate: fullDate
                 })
-                .then(res.status(201).json({ message: 'Utilisateur créé !' }))          //TODO Comment gérer l'erreur d'unicité dans la bdd ?
-                .catch(res.status(401).json({ message: 'Utilisateur non créé !' }));
-            } catch {error => res.status(400).json({ error })};
+                .then(() => res.status(201).json({ message: 'Utilisateur créé !' }))          
+                .catch((error) => res.status(401).json({ message: 'Une erreur est apparue!', error}));
         })
         .catch(error => res.status(500).json({ error }));
 };
 
 exports.readProfile = (req, res, next) => {
-    Model.User.findOne({where :{ id: req.params.id }})
+    Model.User.findOne({
+        where :{ id: req.params.id },
+        attributes: ['id','username','bio']})
     .then(User => {
       if (User.id!=req.params.id) {
         return res.status(401).json({ error: 'Utilisateur non trouvé !' });
@@ -81,34 +83,97 @@ exports.readProfile = (req, res, next) => {
     .catch(error => res.status(501).json({ error }));
 };
 
-exports.updateProfile = (req, res, next) => {                               //TODO Il y a une erreur dans la console mais la route fonctionne
-    try {
-        console.log(res.locals.roleID);
-        Model.User.update(
+exports.updateProfile = (req, res, next) => {                              
+    console.log(res.locals.roleID);
+    if (req.body.id != req.params.id && res.locals.roleID > 1) {
+        modelRole.Role.findOne({where :{ roleId: res.locals.roleID }})
+        .then(Role => {
+            if(Role.updateUser == 1){
+                return Model.User.update(
+                    {username: req.body.username,
+                        email: req.body.email,
+                        bio: req.body.bio,
+                        pictureURL: req.body.pictureURL},
+                    {where: {id: req.params.id}})
+                .then(() => res.status(201).json({ message: 'Utilisateur modifié !' }))  
+                //traitement terminé...
+                .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error}));
+            }
+            else {
+                throw "vous ne possédez pas assez de droits pour cette action";
+            }
+        })
+        .catch(error => res.status(501).json({ error }));
+    } else if (req.body.id == req.params.id) {
+        return Model.User.update(
             {username: req.body.username,
                 email: req.body.email,
                 bio: req.body.bio,
-                pictureURL: req.body.pictureURL,
-                updateDate: fullDate},
+                pictureURL: req.body.pictureURL},
             {where: {id: req.params.id}}
-        ).then(res.status(201).json({ message: 'Utilisateur modifié !' }))  
+        ).then(() => res.status(201).json({ message: 'Utilisateur modifié !' }))  
         //traitement terminé...
-        .catch(res.status(401).json({ message: 'Une erreur est apparue !' }));
-        }
-    catch {
-        return res.status(401).json({ error: 'Utilisateur non trouvé !' });
+        .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error}));
+    }
+    else {
+        throw "vous ne possédez pas assez de droits pour cette action";
     }
 };
 
-exports.deleteProfile = (req, res, next) => {                               //TODO Il y a une erreur dans la console mais la route fonctionne
-    try {                                                                  
-        console.log(res.locals.roleID);
-        Model.User.destroy({where: {id: req.params.id}})
+exports.deleteProfile = (req, res, next) => {                               
+    console.log(res.locals.roleID);
+    if (res.locals.roleID > 1) {
+        modelRole.Role.findOne({where :{ roleId: res.locals.roleID }})
+        .then(Role => {
+            if(Role.deleteUser == 1){
+                return Model.User.destroy({where: {id: req.params.id}})
+                .then(res.status(201).json({ message: 'Utilisateur supprimé !' }))  
+                //traitement terminé...
+                .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
+            }
+            else {
+                throw "vous ne possédez pas assez de droits pour cette action";
+            }
+        })
+        .catch(error => res.status(501).json({ error }));
+    } else if (req.body.id == req.params.id) {
+        return Model.User.destroy({where: {id: req.params.id}})
         .then(res.status(201).json({ message: 'Utilisateur supprimé !' }))  
         //traitement terminé...
-        .catch(res.status(401).json({ message: 'Une erreur est apparue !' }));
-        }
-    catch {
-        return res.status(401).json({ error: 'Utilisateur non trouvé !' });
+        .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
     }
+    else {
+        throw "vous ne possédez pas assez de droits pour cette action";
+    }
+};
+
+exports.giveRights = (req, res, next) => {                              
+    console.log(res.locals.roleID);
+    if (req.body.id != req.params.id && res.locals.roleID > 1) {
+        if (req.body.roleId <= res.locals.roleID) {
+            return Model.User.update(
+                {roleId: req.body.roleId},
+                {where: {id: req.params.id}})
+            .then(() => res.status(201).json({ message: 'Utilisateur modifié !' }))  
+            //traitement terminé...
+            .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error}));
+        }
+        else {
+            throw "Vous ne pouvez pas donner plus de droits que vous n'en avez";
+        }
+    }
+    else {
+        throw "Vous ne pouvez pas modifier ces droits";
+    }
+};
+
+exports.getAllRoles = (req, res, next) => {
+    modelRole.Role.findAll().then(roles => {
+        //on récupère ici un tableau "roles" contenant tous les roles existants
+        res.status(200).json(roles);
+    }).catch(function (e) {
+        //gestion erreur
+        res.status(400).json(roles);
+        console.log(e);
+    })
 };
