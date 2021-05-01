@@ -6,7 +6,7 @@ const User = sequelize.define('Users', {
     id: {type: Sequelize.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true},
     username: {type: Sequelize.STRING(255), allowNull: false, unique: true},
     email: {type: Sequelize.STRING(255), allowNull: false, unique: true},
-    password: {type: Sequelize.STRING(255), allowNull: false, unique: true},
+    password: {type: Sequelize.STRING(255), allowNull: false, unique: false},
     bio: {type: Sequelize.STRING(255), allowNull: true, unique: false},
     pictureURL: {type: Sequelize.STRING(255), allowNull: true, unique: false},
     roleId: {type: Sequelize.INTEGER, allowNull: false, unique: false},

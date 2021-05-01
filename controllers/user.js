@@ -1,18 +1,15 @@
-//on importe le modèle
-var Model = require('../models/User');
-var modelRole = require('../models/Role');
 const config = require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const keyValueToken = process.env.key_value_token;
 const bcrypt = require('bcrypt');
 const auth = require('../middleware/auth');
 
-//modelRole.Role.hasMany(Model.User);
-//Model.User.belongsTo(modelRole.Role);
+var db = require('../lib/models/index.js');
+
 
 //recherche de tous les utilisateurs
 exports.getAllUsers = (req, res, next) => {
-    Model.User.findAll({attributes: {exclude: ['password']}}).then(users => {                 
+    db.User.findAll({attributes: {exclude: ['password']}}).then(users => {                 
         //on récupère ici un tableau "users" contenant une liste d'utilisateurs
         res.status(200).json(users);
     }).catch(function (e) {
@@ -23,7 +20,7 @@ exports.getAllUsers = (req, res, next) => {
 };
 
 exports.login = (req, res, next) => {
-    Model.User.findOne({where: { email: req.body.email }})
+    db.User.findOne({where: { email: req.body.email }})
       .then(User => {
         if (User.email!==req.body.email) {
           return res.status(401).json({ error: 'Utilisateur non trouvé !' });
@@ -52,15 +49,15 @@ exports.signup = (req, res, next) => {
                 var date = dayDate.getFullYear()+'-'+(dayDate.getMonth()+1)+'-'+dayDate.getDate();
                 var hours = dayDate.getHours() + ":" + dayDate.getMinutes() + ":" + dayDate.getSeconds();
                 var fullDate = date+' '+hours;
-                return Model.User.create({
+                return db.User.create({
                     username: req.body.username,
                     email: req.body.email,
                     password: hash,
                     bio: req.body.bio,
                     pictureURL: req.body.pictureURL,
                     roleId: 1,
-                    creationDate: fullDate,
-                    updateDate: fullDate
+                    createdAt: fullDate,
+                    updatedAt: fullDate
                 })
                 .then(() => res.status(201).json({ message: 'Utilisateur créé !' }))          
                 .catch((error) => res.status(401).json({ message: 'Une erreur est apparue!', error}));
@@ -69,7 +66,7 @@ exports.signup = (req, res, next) => {
 };
 
 exports.readProfile = (req, res, next) => {
-    Model.User.findOne({
+    db.User.findOne({
         where :{ id: req.params.id },
         attributes: ['id','username','bio']})
     .then(User => {
@@ -86,10 +83,10 @@ exports.readProfile = (req, res, next) => {
 exports.updateProfile = (req, res, next) => {                              
     console.log(res.locals.roleID);
     if (req.body.id != req.params.id && res.locals.roleID > 1) {
-        modelRole.Role.findOne({where :{ roleId: res.locals.roleID }})
+        db.Role.findOne({where: { id: res.locals.roleID }})
         .then(Role => {
             if(Role.updateUser == 1){
-                return Model.User.update(
+                return db.User.update(
                     {username: req.body.username,
                         email: req.body.email,
                         bio: req.body.bio,
@@ -105,7 +102,7 @@ exports.updateProfile = (req, res, next) => {
         })
         .catch(error => res.status(501).json({ error }));
     } else if (req.body.id == req.params.id) {
-        return Model.User.update(
+        return db.User.update(
             {username: req.body.username,
                 email: req.body.email,
                 bio: req.body.bio,
@@ -123,10 +120,10 @@ exports.updateProfile = (req, res, next) => {
 exports.deleteProfile = (req, res, next) => {                               
     console.log(res.locals.roleID);
     if (res.locals.roleID > 1) {
-        modelRole.Role.findOne({where :{ roleId: res.locals.roleID }})
+        db.Role.findOne({where: { id: res.locals.roleID }})
         .then(Role => {
             if(Role.deleteUser == 1){
-                return Model.User.destroy({where: {id: req.params.id}})
+                return db.User.destroy({where: {id: req.params.id}})
                 .then(res.status(201).json({ message: 'Utilisateur supprimé !' }))  
                 //traitement terminé...
                 .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
@@ -137,7 +134,7 @@ exports.deleteProfile = (req, res, next) => {
         })
         .catch(error => res.status(501).json({ error }));
     } else if (req.body.id == req.params.id) {
-        return Model.User.destroy({where: {id: req.params.id}})
+        return db.User.destroy({where: {id: req.params.id}})
         .then(res.status(201).json({ message: 'Utilisateur supprimé !' }))  
         //traitement terminé...
         .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
@@ -151,7 +148,7 @@ exports.giveRights = (req, res, next) => {
     console.log(res.locals.roleID);
     if (req.body.id != req.params.id && res.locals.roleID > 1) {
         if (req.body.roleId <= res.locals.roleID) {
-            return Model.User.update(
+            return db.User.update(
                 {roleId: req.body.roleId},
                 {where: {id: req.params.id}})
             .then(() => res.status(201).json({ message: 'Utilisateur modifié !' }))  
@@ -168,7 +165,7 @@ exports.giveRights = (req, res, next) => {
 };
 
 exports.getAllRoles = (req, res, next) => {
-    modelRole.Role.findAll().then(roles => {
+    db.Role.findAll().then(roles => {
         //on récupère ici un tableau "roles" contenant tous les roles existants
         res.status(200).json(roles);
     }).catch(function (e) {

@@ -1,9 +1,7 @@
-var Model = require('../lib/models/user');
+var Model = require('../models/User');
 const jwt = require('jsonwebtoken');
 const config = require('dotenv').config();
 const keyValueToken = process.env.key_value_token;
-
-var db = require('../lib/models/index.js');
 
 module.exports = (req, res, next) => {
   try {
@@ -12,10 +10,10 @@ module.exports = (req, res, next) => {
     const decodedToken = jwt.verify(token, keyValueToken);
     const decodedUserId = decodedToken.userId;
     console.log(decodedUserId);
-    db.User.findOne({where: { id: req.body.id}})
+    Model.User.findOne({where: { id: req.body.id}})
       .then(User => {
         console.log(User.roleId);
-        if (req.body.id && req.body.id != decodedUserId) {
+        if (req.body.id && req.body.id != decodedUserId && User.roleId < 2) {
           throw 'You dont have rights';
         } else {
           res.locals.roleID = User.roleId;
