@@ -51,6 +51,8 @@ exports.signup = (req, res, next) => {
                 var fullDate = date+' '+hours;
                 return db.User.create({
                     username: req.body.username,
+                    name: req.body.name,
+                    surname: req.body.surname,
                     email: req.body.email,
                     password: hash,
                     bio: req.body.bio,
@@ -68,7 +70,7 @@ exports.signup = (req, res, next) => {
 exports.readProfile = (req, res, next) => {
     db.User.findOne({
         where :{ id: req.params.id },
-        attributes: ['id','username','bio']})
+        attributes: ['id','name','surname','username','email','bio','pictureURL','createdAt']})
     .then(User => {
       if (User.id!=req.params.id) {
         return res.status(401).json({ error: 'Utilisateur non trouvé !' });
@@ -88,6 +90,8 @@ exports.updateProfile = (req, res, next) => {
             if(Role.updateUser == 1){
                 return db.User.update(
                     {username: req.body.username,
+                        name: req.body.prenom,
+                        surname: req.body.nom,
                         email: req.body.email,
                         bio: req.body.bio,
                         pictureURL: req.body.pictureURL},
@@ -104,6 +108,8 @@ exports.updateProfile = (req, res, next) => {
     } else if (req.body.id == req.params.id) {
         return db.User.update(
             {username: req.body.username,
+                name: req.body.prenom,
+                surname: req.body.nom,
                 email: req.body.email,
                 bio: req.body.bio,
                 pictureURL: req.body.pictureURL},

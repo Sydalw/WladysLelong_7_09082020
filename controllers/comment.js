@@ -21,7 +21,7 @@ exports.getAllCommentsPerUser = (req, res, next) => {                           
 //recherche de tous les comments d'un post
 exports.getAllCommentsPerPost = (req, res, next) => {
     //db.Post.findOne({attributes: ['title', 'content', 'pictureURL', 'createdAt', 'updatedAt'], include: [{model: db.Comment, required: true, attributes: {exclude: ['postId']}}]})
-    db.sequelize.query("SELECT Comments.id, Users.username, Comments.postId, Comments.relatedComment, Comments.content, Comments.createdAt, Comments.updatedAt, SUM(Likings.liking), SUM(Likings.disliking) FROM Posts INNER JOIN Comments ON Comments.postId=Posts.id INNER JOIN Users ON Posts.userId=Users.id LEFT JOIN Likings ON Comments.id=Likings.commentId WHERE Comments.postId="+req.params.postId+" GROUP BY Comments.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Comments.id AS commentId, Users.id, Users.username, Users.pictureURL AS profilePictureURL, Comments.postId, Comments.relatedComment, Comments.content, Comments.createdAt, Comments.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.id = Comments.relatedComment) AS CommentsNb FROM Posts INNER JOIN Comments ON Comments.postId=Posts.id INNER JOIN Users ON Comments.userId=Users.id LEFT JOIN Likings ON Comments.id=Likings.commentId WHERE Comments.postId="+req.params.postId+" AND Comments.relatedComment IS NULL GROUP BY Comments.id ORDER BY Comments.createdAt DESC;", {raw:true, type: sequelize.QueryTypes.SELECT})
     .then(comments => {
         comments.forEach(element => console.log(element.id));
         res.status(200).json(comments);

@@ -9,7 +9,7 @@ var db = require('../lib/models/index.js');
 
 //recherche de tous les posts d'un user
 exports.getAllPostsPerUser = (req, res, next) => {                                      //TODO Comment faire via ORM ?? 
-    db.sequelize.query("SELECT Users.id, Users.username, Users.pictureURL, Posts.id, Posts.title, Posts.content, Posts.createdAt, Posts.updatedAt, SUM(Likings.liking), SUM(Likings.disliking) FROM Users INNER JOIN Posts ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId WHERE Users.id="+req.params.userId+" GROUP BY Posts.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Users.id, Users.username, Users.pictureURL AS profilePictureURL, Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, COUNT(Comments.id) AS CommentsNb FROM Users INNER JOIN Posts ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId LEFT JOIN Comments ON Posts.id=Comments.postId WHERE Users.id="+req.params.userId+" GROUP BY Posts.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
     .then(posts => {
         posts.forEach(element => console.log(element.id));
         res.status(200).json(posts);
@@ -41,15 +41,26 @@ exports.getAllPostsPerUser = (req, res, next) => {                              
 //     .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
 // }
 
+//recherche de tous les posts d'un user
+exports.getLastPosts = (req, res, next) => {                                      //TODO Comment faire via ORM ?? 
+    db.sequelize.query("SELECT Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, Users.id, Users.username, Users.pictureURL, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, COUNT(Comments.id) AS CommentsNb FROM Posts INNER JOIN Users ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId LEFT JOIN Comments ON Posts.id=Comments.postId GROUP BY Posts.id ORDER BY Posts.createdAt DESC;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    .then(posts => {
+        posts.forEach(element => console.log(element.id));
+        res.status(200).json(posts);
+    })
+    .catch(function (e) {
+        //gestion erreur
+        res.status(400).json(posts);
+        console.log(e);
+    })
+};
+
 exports.readPost = (req, res, next) => {
-    db.Post.findOne({where :{ id: req.params.postId }})
+    db.sequelize.query("SELECT Posts.id AS postId, Users.id, Users.username, Users.pictureURL AS profilePictureURL, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, COUNT(Comments.id) AS CommentsNb FROM Posts INNER JOIN Comments ON Comments.postId=Posts.id INNER JOIN Users ON Posts.userId=Users.id LEFT JOIN Likings ON Posts.id=Likings.postId WHERE Posts.id="+req.params.postId+" AND Comments.relatedComment IS NULL GROUP BY Posts.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    //db.Post.findOne({where :{ id: req.params.postId }})
     .then(Post => {
-      if (Post.id!=req.params.postId) {
-        return res.status(401).json({ error: 'Post non trouvé !' });
-      }
-      else {
         res.status(200).json(Post);
-        }
+
     })
     .catch(error => res.status(501).json({ error }));
 };
