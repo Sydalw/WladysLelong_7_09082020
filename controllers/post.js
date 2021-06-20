@@ -9,7 +9,7 @@ var db = require('../lib/models/index.js');
 
 //recherche de tous les posts d'un user
 exports.getAllPostsPerUser = (req, res, next) => {                                      //TODO Comment faire via ORM ?? 
-    db.sequelize.query("SELECT Users.id, Users.username, Users.pictureURL AS profilePictureURL, Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, COUNT(Comments.id) AS CommentsNb FROM Users INNER JOIN Posts ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId LEFT JOIN Comments ON Posts.id=Comments.postId WHERE Users.id="+req.params.userId+" GROUP BY Posts.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Users.id, Users.username, Users.pictureURL AS profilePictureURL, Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+req.body.id+" AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+req.body.id+" AND Likings.postId=Posts.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId=Posts.id) AS CommentsNb FROM Users INNER JOIN Posts ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId WHERE Users.id="+req.params.userId+" GROUP BY Posts.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
     .then(posts => {
         posts.forEach(element => console.log(element.id));
         res.status(200).json(posts);
@@ -43,7 +43,7 @@ exports.getAllPostsPerUser = (req, res, next) => {                              
 
 //recherche de tous les posts d'un user
 exports.getLastPosts = (req, res, next) => {                                      //TODO Comment faire via ORM ?? 
-    db.sequelize.query("SELECT Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, Users.id, Users.username, Users.pictureURL, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, COUNT(Comments.id) AS CommentsNb FROM Posts INNER JOIN Users ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId LEFT JOIN Comments ON Posts.id=Comments.postId GROUP BY Posts.id ORDER BY Posts.createdAt DESC;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, Users.id, Users.username, Users.pictureURL, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+req.body.id+" AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+req.body.id+" AND Likings.postId=Posts.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId=Posts.id) AS CommentsNb FROM Posts INNER JOIN Users ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId GROUP BY Posts.id ORDER BY Posts.createdAt DESC;", {raw:true, type: sequelize.QueryTypes.SELECT})
     .then(posts => {
         posts.forEach(element => console.log(element.id));
         res.status(200).json(posts);
@@ -56,7 +56,7 @@ exports.getLastPosts = (req, res, next) => {                                    
 };
 
 exports.readPost = (req, res, next) => {
-    db.sequelize.query("SELECT Posts.id AS postId, Users.id, Users.username, Users.pictureURL AS profilePictureURL, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, COUNT(Comments.id) AS CommentsNb FROM Posts INNER JOIN Comments ON Comments.postId=Posts.id INNER JOIN Users ON Posts.userId=Users.id LEFT JOIN Likings ON Posts.id=Likings.postId WHERE Posts.id="+req.params.postId+" AND Comments.relatedComment IS NULL GROUP BY Posts.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Posts.id, Posts.userId, Posts.title, Posts.content, Posts.createdAt, Users.pictureURL AS profilePictureURL, Users.username, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+req.body.id+" AND Likings.postId="+req.params.postId+") AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+req.body.id+" AND Likings.postId="+req.params.postId+") AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId = Posts.id) AS CommentsNb FROM Posts LEFT JOIN Likings ON Posts.id=Likings.postId INNER JOIN Users ON Users.id=Posts.userId WHERE Posts.id="+req.params.postId+" GROUP BY Posts.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
     //db.Post.findOne({where :{ id: req.params.postId }})
     .then(Post => {
         res.status(200).json(Post);
@@ -87,7 +87,7 @@ exports.updatePost = (req, res, next) => {
         return db.Post.update({   
             title: req.body.title,
             content: req.body.content,
-            pictureURL: req.body.pictureURL,
+            //pictureURL: req.body.pictureURL,
             updatedAt: dayDate},
             {where: {id: req.params.postId}})
         .then(() => res.status(201).json({ message: 'Post modifié !' }))  
@@ -118,7 +118,7 @@ exports.deletePost = (req, res, next) => {
     var dayDate = new Date();
 
     function fctDeletePost() {
-        return modelPost.Post.destroy(
+        return db.Post.destroy(
             {where: {id: req.params.postId}})
         .then(() => res.status(201).json({ message: 'Post supprimé !' })) 
         .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
@@ -141,39 +141,60 @@ exports.deletePost = (req, res, next) => {
             throw "2 - vous ne possédez pas assez de droits pour cette action";
         }
     })
-    .catch(error => res.status(501).json({ error })); 
+    .catch(error => res.status(503).json({ error })); 
 };
 
 exports.likePost = (req, res, next) => {
     const likingInput = req.body.liking;
+    let userLike = 0
+    let userDislike = 0;
+    db.Liking.findOne({attributes: ['id', 'postId', 'commentId', 'userId', 'Liking', 'Disliking'], where: {userId: req.body.id, postId: req.params.postId, commentId: null}})
+    .then(result => {
+        userLike = result.dataValues.Liking;
+        userDislike = result.dataValues.Disliking;
+        console.log("A Like : "+userLike+" / Dislike : "+userDislike);
+        return db.Liking.destroy(
+            {where: {postId: req.params.postId, userId: req.body.id}})
+        .then(() => res.status(201).json({ message: 'Annulation enregistrée !' }))  
+        .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
+    })
+    .catch(function(error) {
         switch (likingInput) {
             case 1:
-                return db.Liking.create({
-                    postId: req.params.postId,
-                    userId: req.body.id,
-                    liking: true,
-                    disliking: false
-                })
-                .then(() => res.status(201).json({ message: 'Like enregistré !' }))          
-                .catch((error) => res.status(401).json({ message: 'Like non enregistré !', error }));
-                break;
+                if(userLike === 0 && userDislike === 0) {
+                    console.log("B Like : "+userLike+" / Dislike : "+userDislike);
+                    return db.Liking.create({
+                        postId: req.params.postId,
+                        userId: req.body.id,
+                        liking: true,
+                        disliking: false
+                    })
+                    .then(() => res.status(201).json({ message: 'Like enregistré !' }))          
+                    .catch((error) => res.status(401).json({ message: 'Like non enregistré !', error }));
+                    break;
+                } else {
+                    throw "Vous avez déjà liké ce message"
+                }
             case 0:
-                return db.Liking.destroy(
-                    {where: {postId: req.params.postId, userId: req.body.id}})
-                .then(() => res.status(201).json({ message: 'Annulation enregistrée !' }))  
-                //traitement terminé...
-                .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
+                res.status(501).json({ message: 'Aucun like à annuler !', error });
                 break;
             case -1:
-                return db.Liking.create({
-                    postId: req.params.postId,
-                    userId: req.body.id,
-                    disliking: true,
-                    liking: false
-                })
-                .then(() => res.status(201).json({ message: 'Dislike enregistré !' }))          
-                .catch((error) => res.status(401).json({ message: 'Dislike non enregistré !', error }));
+                if(userLike === 0 && userDislike === 0){
+                    console.log("B Like : "+userLike+" / Dislike : "+userDislike);
+                    return db.Liking.create({
+                        postId: req.params.postId,
+                        userId: req.body.id,
+                        disliking: true,
+                        liking: false
+                    })
+                    .then(() => res.status(201).json({ message: 'Dislike enregistré !' }))          
+                    .catch((error) => res.status(401).json({ message: 'Dislike non enregistré !', error }));
+                } else {
+                    throw "Vous avez déjà disliké ce message"
+                }
         }
+        }
+    );
 };
 
 exports.getLikingsForAPost= (req, res, next) => {

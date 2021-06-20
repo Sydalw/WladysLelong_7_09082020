@@ -21,7 +21,7 @@ exports.getAllCommentsPerUser = (req, res, next) => {                           
 //recherche de tous les comments d'un post
 exports.getAllCommentsPerPost = (req, res, next) => {
     //db.Post.findOne({attributes: ['title', 'content', 'pictureURL', 'createdAt', 'updatedAt'], include: [{model: db.Comment, required: true, attributes: {exclude: ['postId']}}]})
-    db.sequelize.query("SELECT Comments.id AS commentId, Users.id, Users.username, Users.pictureURL AS profilePictureURL, Comments.postId, Comments.relatedComment, Comments.content, Comments.createdAt, Comments.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.id = Comments.relatedComment) AS CommentsNb FROM Posts INNER JOIN Comments ON Comments.postId=Posts.id INNER JOIN Users ON Comments.userId=Users.id LEFT JOIN Likings ON Comments.id=Likings.commentId WHERE Comments.postId="+req.params.postId+" AND Comments.relatedComment IS NULL GROUP BY Comments.id ORDER BY Comments.createdAt DESC;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Comments.id AS commentId, Users.id, Users.username, Users.pictureURL AS profilePictureURL, Comments.postId, Comments.relatedComment, Comments.deletionFlag, Comments.content, Comments.createdAt, Comments.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+req.body.id+" AND Likings.commentId=Comments.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+req.body.id+" AND Likings.commentId=Comments.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.id = Comments.relatedComment) AS CommentsNb FROM Posts INNER JOIN Comments ON Comments.postId=Posts.id INNER JOIN Users ON Comments.userId=Users.id LEFT JOIN Likings ON Comments.id=Likings.commentId WHERE Comments.postId="+req.params.postId+" AND Comments.relatedComment IS NULL GROUP BY Comments.id ORDER BY Comments.createdAt DESC;", {raw:true, type: sequelize.QueryTypes.SELECT})
     .then(comments => {
         comments.forEach(element => console.log(element.id));
         res.status(200).json(comments);
@@ -138,36 +138,89 @@ exports.deleteComment = (req, res, next) => {
     .catch(error => res.status(501).json({ error }));
 };
 
-exports.likeComment = (req, res, next) => {                                                 //TODO il faut empecher le like d'un commentaire supprimé
+// exports.likeComment = (req, res, next) => {                                                 //TODO il faut empecher le like d'un commentaire supprimé
+//     const likingInput = req.body.liking;
+//         switch (likingInput) {
+//             case 1:
+//                 db.Liking.create({
+//                     commentId: req.params.commentId,
+//                     userId: req.body.id,
+//                     liking: true,
+//                     disliking: false
+//                 })
+//                 .then(res.status(201).json({ message: 'Like enregistré !' }))          
+//                 .catch(res.status(401).json({ message: 'Like non enregistré !' }));
+//                 break;
+//             case 0:
+//                 db.Liking.destroy(
+//                     {where: {commentId: req.params.commentId, userId: req.body.id}}
+//                 ).then(res.status(201).json({ message: 'Annulation enregistrée !' }))  
+//                 //traitement terminé...
+//                 .catch(res.status(401).json({ message: 'Une erreur est apparue !' }));
+//                 break;
+//             case -1:
+//                 db.Liking.create({
+//                     commentId: req.params.commentId,
+//                     userId: req.body.id,
+//                     disliking: true,
+//                     liking: false
+//                 })
+//                 .then(res.status(201).json({ message: 'Dislike enregistré !' }))          
+//                 .catch(res.status(401).json({ message: 'Dislike non enregistré !' }));
+//         }
+// };
+
+exports.likeComment = (req, res, next) => {
     const likingInput = req.body.liking;
+    let userLike = 0
+    let userDislike = 0;
+    db.Liking.findOne({attributes: ['id', 'postId', 'commentId', 'userId', 'Liking', 'Disliking'], where: {userId: req.body.id, commentId: req.params.commentId}})
+    .then(result => {
+        userLike = result.dataValues.Liking;
+        userDislike = result.dataValues.Disliking;
+        console.log("A Like : "+userLike+" / Dislike : "+userDislike);
+        return db.Liking.destroy(
+            {where: {commentId: req.params.commentId, userId: req.body.id}})
+        .then(() => res.status(201).json({ message: 'Annulation enregistrée !' }))  
+        .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
+    })
+    .catch(function(error) {
         switch (likingInput) {
             case 1:
-                db.Liking.create({
-                    commentId: req.params.commentId,
-                    userId: req.body.id,
-                    liking: true,
-                    disliking: false
-                })
-                .then(res.status(201).json({ message: 'Like enregistré !' }))          
-                .catch(res.status(401).json({ message: 'Like non enregistré !' }));
-                break;
+                if(userLike === 0 && userDislike === 0) {
+                    console.log("B Like : "+userLike+" / Dislike : "+userDislike);
+                    return db.Liking.create({
+                        commentId: req.params.commentId,
+                        userId: req.body.id,
+                        liking: true,
+                        disliking: false
+                    })
+                    .then(() => res.status(201).json({ message: 'Like enregistré !' }))          
+                    .catch((error) => res.status(401).json({ message: 'Like non enregistré !', error }));
+                    break;
+                } else {
+                    throw "Vous avez déjà liké ce message"
+                }
             case 0:
-                db.Liking.destroy(
-                    {where: {commentId: req.params.commentId, userId: req.body.id}}
-                ).then(res.status(201).json({ message: 'Annulation enregistrée !' }))  
-                //traitement terminé...
-                .catch(res.status(401).json({ message: 'Une erreur est apparue !' }));
+                res.status(501).json({ message: 'Aucun like à annuler !', error });
                 break;
             case -1:
-                db.Liking.create({
-                    commentId: req.params.commentId,
-                    userId: req.body.id,
-                    disliking: true,
-                    liking: false
-                })
-                .then(res.status(201).json({ message: 'Dislike enregistré !' }))          
-                .catch(res.status(401).json({ message: 'Dislike non enregistré !' }));
+                if(userLike === 0 && userDislike === 0){
+                    console.log("B Like : "+userLike+" / Dislike : "+userDislike);
+                    return db.Liking.create({
+                        commentId: req.params.commentId,
+                        userId: req.body.id,
+                        disliking: true,
+                        liking: false
+                    })
+                    .then(() => res.status(201).json({ message: 'Dislike enregistré !' }))          
+                    .catch((error) => res.status(401).json({ message: 'Dislike non enregistré !', error }));
+                } else {
+                    throw "Vous avez déjà disliké ce message"
+                }
         }
+        }
+    );
 };
 
 exports.getLikingsForAComment= (req, res, next) => {

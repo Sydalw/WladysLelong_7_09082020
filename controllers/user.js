@@ -9,10 +9,15 @@ var db = require('../lib/models/index.js');
 
 //recherche de tous les utilisateurs
 exports.getAllUsers = (req, res, next) => {
-    db.User.findAll({attributes: {exclude: ['password']}}).then(users => {                 
+    db.User.findAll({
+        attributes: ['id','name','surname','username','createdAt', 'pictureURL','roleId'],
+        include: [{model: db.Role, raw: true}]
+    })
+    .then(users => {                 
         //on récupère ici un tableau "users" contenant une liste d'utilisateurs
         res.status(200).json(users);
-    }).catch(function (e) {
+    })
+    .catch(function (e) {
         //gestion erreur
         res.status(400).json(users);
         console.log(e);
@@ -70,7 +75,9 @@ exports.signup = (req, res, next) => {
 exports.readProfile = (req, res, next) => {
     db.User.findOne({
         where :{ id: req.params.id },
-        attributes: ['id','name','surname','username','email','bio','pictureURL','createdAt']})
+        attributes: ['id','name','surname','username','email','bio','pictureURL','createdAt', 'roleId'],
+        include: [{model: db.Role, attributes: ['roleName'],raw: true}]
+    })
     .then(User => {
       if (User.id!=req.params.id) {
         return res.status(401).json({ error: 'Utilisateur non trouvé !' });

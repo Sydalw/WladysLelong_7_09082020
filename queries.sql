@@ -111,32 +111,59 @@ INSERT INTO Comments VALUES (1, 1, 1, NULL, 'le texte du 1er commentaire', 0,'20
 INSERT INTO Comments VALUES (2, 1, 1, NULL, 'le texte du 2nd commentaire', 0,'2021-04-24 13:43:00','2021-04-24 13:43:00');
 INSERT INTO Comments VALUES (3, 1, 1,  1, 'le texte du 1er commentaire en réponse au 1er commentaire', 0,'2021-04-24 13:43:00','2021-04-24 13:43:00');
 
-SELECT Posts.id, Posts.userId, Posts.title, Posts.content, Posts.createdAt, Users.username, SUM(Likings.liking), SUM(Likings.disliking) 
-FROM Posts 
+SELECT Posts.id, Posts.userId, Posts.title, Posts.content, Posts.createdAt, Users.username, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.id = Comments.relatedComment) AS CommentsNb  
+FROM Posts
+LEFT JOIN Likings 
+	ON Posts.id=Likings.postId  
 INNER JOIN Users 
 	ON Users.id=Posts.userId 
-LEFT JOIN Likings 
-	ON Posts.id=Likings.postId 
-WHERE Posts.userId=16 
+WHERE Posts.id=4 
 GROUP BY Posts.id;
 
-SELECT Users.id, Users.username, Users.pictureURL, Posts.id, Posts.title, Posts.content, Posts.createdAt, Posts.updatedAt, SUM(Likings.liking), SUM(Likings.disliking) 
+
+-- Lire un POST
+SELECT Posts.id, Posts.userId, Posts.title, Posts.content, Posts.createdAt, Users.username, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId=1 AND Likings.postId=4) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId=1 AND Likings.postId=4) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.id = Comments.relatedComment) AS CommentsNb  
+FROM Posts
+LEFT JOIN Likings 
+	ON Posts.id=Likings.postId  
+INNER JOIN Users 
+	ON Users.id=Posts.userId 
+WHERE Posts.id=4 
+GROUP BY Posts.id;
+
+-- Tous les posts d'un user
+SELECT Users.id, Users.username, Users.pictureURL AS profilePictureURL, Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, (SELECT Likings.liking FROM Likings WHERE Likings.userId=1 AND Likings.postId=Posts.id) AS myLike, COUNT(Comments.id) AS CommentsNb 
 FROM Users 
 INNER JOIN Posts 
 	ON Users.id=Posts.userId 
 LEFT JOIN Likings 
 	ON Posts.id=Likings.postId 
-WHERE Users.id=16 
+LEFT JOIN Comments 
+	ON Posts.id=Comments.postId 
+WHERE Users.id=1
 GROUP BY Posts.id;
+
+
+-- Les derniers posts
+SELECT Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, Users.id, Users.username, Users.pictureURL, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, (SELECT Likings.liking FROM Likings WHERE Likings.userId=1 AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId=1 AND Likings.postId=Posts.id) AS myDislike, COUNT(Comments.id) AS CommentsNb 
+FROM Posts 
+INNER JOIN Users 
+	ON Users.id=Posts.userId 
+LEFT JOIN Likings 
+	ON Posts.id=Likings.postId 
+LEFT JOIN Comments 
+	ON Posts.id=Comments.postId 
+GROUP BY Posts.id 
+ORDER BY Posts.createdAt DESC;
+
+
 
 SELECT Comments.id AS commentId, Users.username, Comments.postId, Comments.relatedComment, Comments.content, Comments.createdAt, Comments.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.id = Comments.relatedComment) AS CommentsNb 
 FROM Posts 
-INNER JOIN Comments 
-	ON Comments.postId=Posts.id 
+LEFT JOIN Likings 
+	ON Comments.id=Likings.commentId  
 INNER JOIN Users 
 	ON Posts.userId=Users.id 
-LEFT JOIN Likings 
-	ON Comments.id=Likings.commentId 
 WHERE Comments.postId=4 AND Comments.relatedComment IS NULL
 GROUP BY Comments.id
 ORDER BY Comments.createdAt DESC;
