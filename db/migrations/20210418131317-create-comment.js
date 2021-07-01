@@ -30,7 +30,11 @@ module.exports = {
       updatedAt: {
         allowNull: false,
         type: Sequelize.DATE
-      }
+      },
+      indentationLevel: {
+        allowNull: false,
+        type: Sequelize.INTEGER.UNSIGNED
+      },
     });
   },
   down: async (queryInterface, Sequelize) => {

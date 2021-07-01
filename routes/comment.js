@@ -5,7 +5,8 @@ const auth = require('../middleware/auth');
 const commentCtrl = require('../controllers/comment');
 
 router.get('/user/:userId/comments', auth, commentCtrl.getAllCommentsPerUser);
-router.post('/post/:postId/comments', auth, commentCtrl.getAllCommentsPerPost);
+router.get('/post/:postId/comments', auth, commentCtrl.getAllCommentsPerPost);
+router.get('/comment/:commentId/comments', auth, commentCtrl.getAllCommentsPerComment);
 router.get('/comment/:commentId', auth, commentCtrl.readComment);
 router.post('/post/:postId/comment', auth, commentCtrl.createComment);
 router.put('/comment/:commentId', auth, commentCtrl.updateComment);

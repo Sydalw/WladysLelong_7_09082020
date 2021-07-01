@@ -4,14 +4,14 @@ const auth = require('../middleware/auth');
 
 const postCtrl = require('../controllers/post');
 
-router.post('/user/:userId/posts', auth, postCtrl.getAllPostsPerUser);
-router.post('/posts', auth, postCtrl.getLastPosts);
-router.post('/post/:postId', auth, postCtrl.readPost);
+router.get('/user/:userId/posts', auth, postCtrl.getAllPostsPerUser);
+router.get('/posts', auth, postCtrl.getLastPosts);
+router.get('/post/:postId', auth, postCtrl.readPost);
 router.post('/post', auth, postCtrl.createPost);
 router.put('/post/:postId', auth, postCtrl.updatePost);
 router.delete('/post/:postId', auth, postCtrl.deletePost);
 router.post('/post/:postId/liking', auth, postCtrl.likePost);
-router.post('/post/:postId/likings', auth, postCtrl.getLikingsForAPost);
+router.get('/post/:postId/likings', auth, postCtrl.getLikingsForAPost);
 
 router.get('/post/:postId/doublejointure', auth, postCtrl.doublejointure);
 

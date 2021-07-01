@@ -76,7 +76,7 @@ exports.readProfile = (req, res, next) => {
     db.User.findOne({
         where :{ id: req.params.id },
         attributes: ['id','name','surname','username','email','bio','pictureURL','createdAt', 'roleId'],
-        include: [{model: db.Role, attributes: ['roleName'],raw: true}]
+        include: [{model: db.Role, attributes: ['roleName', 'updatePost', 'deletePost', 'updateComment', 'deleteComment', 'updateUser', 'deleteUser'],raw: true}]
     })
     .then(User => {
       if (User.id!=req.params.id) {

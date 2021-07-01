@@ -39,6 +39,7 @@ userId SMALLINT UNSIGNED,
 relatedComment SMALLINT UNSIGNED,
 content TEXT NOT NULL,
 deletionFlag TINYINT(1) NOT NULL,
+indentationLevel TINYINT UNSIGNED NOT NULL,
 createdAt DATETIME NOT NULL,
 updatedAt DATETIME NOT NULL,
 PRIMARY KEY (id)
@@ -122,13 +123,25 @@ GROUP BY Posts.id;
 
 
 -- Lire un POST
-SELECT Posts.id, Posts.userId, Posts.title, Posts.content, Posts.createdAt, Users.username, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId=1 AND Likings.postId=4) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId=1 AND Likings.postId=4) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.id = Comments.relatedComment) AS CommentsNb  
-FROM Posts
+SELECT 
+	Posts.id, 
+	Posts.userId, 
+	Posts.title, 
+	Posts.content, 
+	Posts.createdAt, 
+	Users.pictureURL AS profilePictureURL, 
+	Users.username, 
+	SUM(Likings.liking) AS Likes, 
+	SUM(Likings.disliking) AS Dislikes, 
+	(SELECT Likings.liking FROM Likings WHERE Likings.userId=1 AND Likings.postId=4) AS myLike, 
+	(SELECT Likings.disliking FROM Likings WHERE Likings.userId=1 AND Likings.postId=4) AS myDislike, 
+	(SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId = Posts.id AND Comments.indentationLevel = 0) AS CommentsNb 
+FROM Posts 
 LEFT JOIN Likings 
-	ON Posts.id=Likings.postId  
+	ON Posts.id=Likings.postId 
 INNER JOIN Users 
 	ON Users.id=Posts.userId 
-WHERE Posts.id=4 
+WHERE Posts.id=4
 GROUP BY Posts.id;
 
 -- Tous les posts d'un user
@@ -156,15 +169,60 @@ LEFT JOIN Comments
 GROUP BY Posts.id 
 ORDER BY Posts.createdAt DESC;
 
-
-
-SELECT Comments.id AS commentId, Users.username, Comments.postId, Comments.relatedComment, Comments.content, Comments.createdAt, Comments.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.id = Comments.relatedComment) AS CommentsNb 
-FROM Posts 
-LEFT JOIN Likings 
-	ON Comments.id=Likings.commentId  
+--Les commentaires d'un post
+SELECT Comments.id AS commentId,
+	Users.id, 
+	Users.username, 
+	Users.pictureURL AS profilePictureURL,  
+	Comments.postId, 
+	Comments.relatedComment, 
+	Comments.deletionFlag,
+	Comments.indentationLevel,  
+	Comments.content, 
+	Comments.createdAt, 
+	Comments.updatedAt,
+	SUM(Likings.liking) AS Likes, 
+	SUM(Likings.disliking) AS Dislikes, 
+	(SELECT Likings.liking FROM Likings WHERE Likings.userId=1 AND Likings.commentId=Comments.id) AS myLike, 
+	(SELECT Likings.disliking FROM Likings WHERE Likings.userId=1 AND Likings.commentId=Comments.id) AS myDislike, 
+	(SELECT COUNT(C3.id) FROM (SELECT C2.id, C2.postId, C2.userId, C2.relatedComment, C2.content, C2.deletionFlag, C2.indentationLevel, C2.createdAt, C2.updatedAt, C1.id AS C1_id, C1.relatedComment AS C1_rC, C1.content AS C1_c
+		FROM Comments As C1
+		RIGHT OUTER JOIN Comments AS C2
+		ON C2.id=C1.relatedComment
+		WHERE C2.postId=4 AND C2.indentationLevel=0 AND C2.id=C1.relatedComment AND C2.id=Comments.id) AS C3) AS CommentsNb
+FROM Comments
 INNER JOIN Users 
-	ON Posts.userId=Users.id 
-WHERE Comments.postId=4 AND Comments.relatedComment IS NULL
-GROUP BY Comments.id
-ORDER BY Comments.createdAt DESC;
+	ON Comments.userId=Users.id 
+LEFT JOIN Likings 
+	ON Comments.id=Likings.commentId 
+WHERE Comments.postId=4 AND Comments.indentationLevel=0
+GROUP BY Comments.id;
 
+--Les commentaires d'un commentaire
+SELECT Comments.id AS commentId,
+	Users.id, 
+	Users.username, 
+	Users.pictureURL AS profilePictureURL,  
+	Comments.postId, 
+	Comments.relatedComment, 
+	Comments.deletionFlag,
+	Comments.indentationLevel,  
+	Comments.content, 
+	Comments.createdAt, 
+	Comments.updatedAt,
+	SUM(Likings.liking) AS Likes, 
+	SUM(Likings.disliking) AS Dislikes, 
+	(SELECT Likings.liking FROM Likings WHERE Likings.userId=1 AND Likings.commentId=Comments.id) AS myLike, 
+	(SELECT Likings.disliking FROM Likings WHERE Likings.userId=1 AND Likings.commentId=Comments.id) AS myDislike, 
+	(SELECT COUNT(C3.id) FROM (SELECT C2.id, C2.postId, C2.userId, C2.relatedComment, C2.content, C2.deletionFlag, C2.indentationLevel, C2.createdAt, C2.updatedAt, C1.id AS C1_id, C1.relatedComment AS C1_rC, C1.content AS C1_c
+		FROM Comments As C1
+		RIGHT OUTER JOIN Comments AS C2
+		ON C2.id=C1.relatedComment
+		WHERE C2.id=19 AND C2.id=C1.relatedComment AND C2.id=Comments.id) AS C3) AS CommentsNb
+FROM Comments
+INNER JOIN Users 
+	ON Comments.userId=Users.id 
+LEFT JOIN Likings 
+	ON Comments.id=Likings.commentId 
+WHERE Comments.relatedComment=19
+GROUP BY Comments.id;
