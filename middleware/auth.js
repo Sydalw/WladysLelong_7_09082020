@@ -48,7 +48,7 @@ module.exports = (req, res, next) => {
           throw 'You dont have rights';
         } else {
           res.locals.roleID = User.roleId;
-          console.log("next")
+          console.log("next auth")
           next();
         }
       })
