@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const keyValueToken = process.env.key_value_token;
 const bcrypt = require('bcrypt');
 const auth = require('../middleware/auth');
+const fs = require('fs');
 
 var db = require('../lib/models/index.js');
 
@@ -89,48 +90,106 @@ exports.readProfile = (req, res, next) => {
     .catch(error => res.status(501).json({ error }));
 };
 
-exports.updateProfile = (req, res, next) => {                              
+exports.updateProfile = (req, res, next) => {
+    console.log("entrée dans le controlleur");
     console.log(res.locals.roleID);
-    if (req.body.id != req.params.id && res.locals.roleID > 1) {
+    const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0]; 
+    if (decodedUserId != req.params.id && res.locals.roleID > 1) {
         db.Role.findOne({where: { id: res.locals.roleID }})
         .then(Role => {
             if(Role.updateUser == 1){
-                return db.User.update(
-                    {username: req.body.username,
-                        name: req.body.prenom,
-                        surname: req.body.nom,
-                        email: req.body.email,
-                        bio: req.body.bio,
-                        pictureURL: req.body.pictureURL},
-                    {where: {id: req.params.id}})
-                .then(() => res.status(201).json({ message: 'Utilisateur modifié !' }))  
-                //traitement terminé...
-                .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error}));
+                if(req.file != null){
+                    console.log("file présent");
+                    db.User.findOne({
+                        where :{ id: req.params.id },
+                        attributes: ['pictureURL']
+                    }).then(User => {
+                        if(User.pictureURL != null) {
+                            const filename = User.pictureUrl.split('/images/')[1];
+                            fs.unlink(`images/${filename}`, (err) => {
+                                if (err) throw err;
+                            });
+                        }
+                    })
+                    .catch(error => res.status(501).json({ error }));
+                    return db.User.update(
+                        {username: req.body.username,
+                            name: req.body.name,
+                            surname: req.body.surname,
+                            email: req.body.email,
+                            bio: req.body.bio,
+                            pictureURL: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,},
+                            {where: {id: req.params.id}})
+                            .then(() => res.status(201).json({ message: 'Utilisateur modifié -1 !' }))  
+                            //traitement terminé...
+                            .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error}));
+                } else {
+                    console.log("file absent");
+                    return db.User.update(
+                        {username: req.body.username,
+                            name: req.body.name,
+                            surname: req.body.surname,
+                            email: req.body.email,
+                            bio: req.body.bio,
+                            pictureURL: req.body.pictureURL},
+                            {where: {id: req.params.id}})
+                            .then(() => res.status(201).json({ message: 'Utilisateur modifié -2 !' }))  
+                            //traitement terminé...
+                            .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error}));
+                }
             }
             else {
                 throw "vous ne possédez pas assez de droits pour cette action";
             }
         })
         .catch(error => res.status(501).json({ error }));
-    } else if (req.body.id == req.params.id) {
-        return db.User.update(
-            {username: req.body.username,
-                name: req.body.prenom,
-                surname: req.body.nom,
-                email: req.body.email,
-                bio: req.body.bio,
-                pictureURL: req.body.pictureURL},
-            {where: {id: req.params.id}}
-        ).then(() => res.status(201).json({ message: 'Utilisateur modifié !' }))  
-        //traitement terminé...
-        .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error}));
-    }
-    else {
+    } else if (decodedUserId == req.params.id) {
+        if(req.file != null){
+            console.log("file présent");
+            db.User.findOne({
+                where :{ id: req.params.id },
+                attributes: ['pictureURL']
+            }).then(User => {
+                if(User.pictureURL != null) {
+                    const filename = User.pictureUrl.split('/images/')[1];
+                    fs.unlink(`images/${filename}`, (err) => {
+                        if (err) throw err;
+                    });
+                }
+            })
+            .catch(error => res.status(501).json({ error }));
+            return db.User.update(
+                {username: req.body.username,
+                    name: req.body.name,
+                    surname: req.body.surname,
+                    email: req.body.email,
+                    bio: req.body.bio,
+                    pictureURL: req.body.pictureURL},
+                {where: {id: req.params.id}}
+            ).then(() => res.status(201).json({ message: 'Utilisateur modifié -3 !' }))  
+            //traitement terminé...
+            .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error}));
+        } else {
+            console.log("file absent");
+            return db.User.update(
+                {username: req.body.username,
+                    name: req.body.name,
+                    surname: req.body.surname,
+                    email: req.body.email,
+                    bio: req.body.bio,
+                    pictureURL: req.body.pictureURL},
+                    {where: {id: req.params.id}})
+                    .then(() => res.status(201).json({ message: 'Utilisateur modifié -4 !' }))  
+                    //traitement terminé...
+                    .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error}));
+        }
+    } else {
         throw "vous ne possédez pas assez de droits pour cette action";
     }
 };
 
-exports.deleteProfile = (req, res, next) => {                               
+exports.deleteProfile = (req, res, next) => {            
+    const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0];                    
     console.log(res.locals.roleID);
     if (res.locals.roleID > 1) {
         db.Role.findOne({where: { id: res.locals.roleID }})
@@ -146,7 +205,7 @@ exports.deleteProfile = (req, res, next) => {
             }
         })
         .catch(error => res.status(501).json({ error }));
-    } else if (req.body.id == req.params.id) {
+    } else if (decodedUserId == req.params.id) {
         return db.User.destroy({where: {id: req.params.id}})
         .then(res.status(201).json({ message: 'Utilisateur supprimé !' }))  
         //traitement terminé...

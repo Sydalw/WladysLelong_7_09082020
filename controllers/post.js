@@ -57,6 +57,35 @@ exports.getLastPosts = (req, res, next) => {
     })
 };
 
+//recherche de tous les posts d'un user
+exports.getNbLastPosts = (req, res, next) => {
+    const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0];                                        //TODO Comment faire via ORM ?? 
+    db.sequelize.query("SELECT COUNT(postId) AS Nb FROM (SELECT Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, Users.id, Users.username, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId=Posts.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId=Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Posts INNER JOIN Users ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId GROUP BY Posts.id ORDER BY Posts.createdAt DESC) AS Datas", {raw:true, type: sequelize.QueryTypes.SELECT})
+    .then(numberOfPosts => {
+        res.status(200).json(numberOfPosts);
+    })
+    .catch(function (e) {
+        //gestion erreur
+        res.status(400).json(numberOfPosts);
+        console.log(e);
+    })
+};
+
+//recherche de tous les posts d'un user
+exports.getPopularPosts = (req, res, next) => {
+    const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0];                                        //TODO Comment faire via ORM ?? 
+    db.sequelize.query("SELECT Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, Users.id, Users.username, Users.pictureURL, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId=Posts.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId=Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Posts INNER JOIN Users ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId GROUP BY Posts.id ORDER BY CommentsNb DESC;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    .then(posts => {
+        posts.forEach(element => console.log(element.id));
+        res.status(200).json(posts);
+    })
+    .catch(function (e) {
+        //gestion erreur
+        res.status(400).json(posts);
+        console.log(e);
+    })
+};
+
 exports.readPost = (req, res, next) => {
     const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0];  
     db.sequelize.query("SELECT Posts.id, Posts.userId, Posts.title, Posts.content, Posts.createdAt, Users.pictureURL AS profilePictureURL, Users.username, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId="+req.params.postId+") AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId="+req.params.postId+") AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId = Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Posts LEFT JOIN Likings ON Posts.id=Likings.postId INNER JOIN Users ON Users.id=Posts.userId WHERE Posts.id="+req.params.postId+" GROUP BY Posts.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
@@ -132,7 +161,7 @@ exports.deletePost = (req, res, next) => {
     db.User.findOne({attributes: ['id', 'roleId'], where: {id: decodedUserId}, include: { model: db.Role, attributes: ['deletePost']}})    
     .then(result => {
         if (res.locals.roleID > 1) {
-            if(result.deletePost == 1){
+            if(result.Role.deletePost == 1){
                 fctDeletePost();
             }
             else {
@@ -145,7 +174,7 @@ exports.deletePost = (req, res, next) => {
             throw "2 - vous ne possédez pas assez de droits pour cette action";
         }
     })
-    .catch(error => res.status(503).json({ error })); 
+    .catch(error => res.status(501).json({ error })); 
 };
 
 exports.likePost = (req, res, next) => {
