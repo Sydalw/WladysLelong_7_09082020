@@ -12,6 +12,6 @@ router.post('/post/:postId/comment', auth, commentCtrl.createComment);
 router.put('/comment/:commentId', auth, commentCtrl.updateComment);
 router.delete('/comment/:commentId', auth, commentCtrl.deleteComment);
 router.post('/comment/:commentId/liking', auth, commentCtrl.likeComment);
-router.get('/post/:postId/comment/:commentId/likings', auth, commentCtrl.getLikingsForAComment);
+
 
 module.exports = router;

@@ -10,7 +10,7 @@ var db = require('../lib/models/index.js');
 //recherche de tous les posts d'un user
 exports.getAllPostsPerUser = (req, res, next) => {        
     const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0];                              //TODO Comment faire via ORM ?? 
-    db.sequelize.query("SELECT Users.id, Users.username, Users.pictureURL AS profilePictureURL, Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId=Posts.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId=Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Users INNER JOIN Posts ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId WHERE Users.id="+req.params.userId+" GROUP BY Posts.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Users.id, Users.username, Users.pictureURL AS profilePictureURL, Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.postId=Posts.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId=Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Users INNER JOIN Posts ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId WHERE Users.id= :requestedId GROUP BY Posts.id;", {raw:true, replacements:{decodedUserId: decodedUserId, requestedId: req.params.userId}, type: sequelize.QueryTypes.SELECT})
     .then(posts => {
         posts.forEach(element => console.log(element.id));
         res.status(200).json(posts);
@@ -22,30 +22,10 @@ exports.getAllPostsPerUser = (req, res, next) => {
     })
 };
 
-// exports.getAllPostsPerUser = (req, res, next) => {          
-//     db.Post.findAll({attributes: ['postId', 'title', 'content', 'userId'], include: [{model: modelUser.User, attributes: ['username'], where: {id: req.params.userId}}]})
-//     .then(posts => {
-//         console.log(posts);
-//         res.status(200).json(posts);})
-//     .catch(function (e) {
-//         //gestion erreur
-//         console.log(e);
-//         res.status(400).json();
-//     })
-// };
-
-// exports.getAllPostsPerUser = (req, res, next) => {     
-//     db.Post.sequelize.query("SELECT postId, userId, username, title, content, Posts.createdAt, Posts.updatedAt FROM Posts INNER JOIN Users ON userId=id WHERE userId="+req.params.userId)
-//     .then(([results, metadata]) => {
-//         res.status(201).json(results)
-//     })
-//     .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
-// }
-
 //recherche de tous les posts d'un user
 exports.getLastPosts = (req, res, next) => {
     const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0];                                        //TODO Comment faire via ORM ?? 
-    db.sequelize.query("SELECT Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, Users.id, Users.username, Users.pictureURL, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId=Posts.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId=Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Posts INNER JOIN Users ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId GROUP BY Posts.id ORDER BY Posts.createdAt DESC;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, Users.id, Users.username, Users.pictureURL, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, (SELECT Likings.liking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.postId=Posts.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId=Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Posts INNER JOIN Users ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId GROUP BY Posts.id ORDER BY Posts.createdAt DESC;", {raw:true, replacements:{decodedUserId: decodedUserId}, type: sequelize.QueryTypes.SELECT})
     .then(posts => {
         posts.forEach(element => console.log(element.id));
         res.status(200).json(posts);
@@ -60,7 +40,7 @@ exports.getLastPosts = (req, res, next) => {
 //recherche de tous les posts d'un user
 exports.getNbLastPosts = (req, res, next) => {
     const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0];                                        //TODO Comment faire via ORM ?? 
-    db.sequelize.query("SELECT COUNT(postId) AS Nb FROM (SELECT Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, Users.id, Users.username, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId=Posts.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId=Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Posts INNER JOIN Users ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId GROUP BY Posts.id ORDER BY Posts.createdAt DESC) AS Datas", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT COUNT(postId) AS Nb FROM (SELECT Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, Users.id, Users.username, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, (SELECT Likings.liking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.postId=Posts.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId=Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Posts INNER JOIN Users ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId GROUP BY Posts.id ORDER BY Posts.createdAt DESC) AS Datas", {raw:true, replacements:{decodedUserId: decodedUserId}, type: sequelize.QueryTypes.SELECT})
     .then(numberOfPosts => {
         res.status(200).json(numberOfPosts);
     })
@@ -74,7 +54,7 @@ exports.getNbLastPosts = (req, res, next) => {
 //recherche de tous les posts d'un user
 exports.getPopularPosts = (req, res, next) => {
     const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0];                                        //TODO Comment faire via ORM ?? 
-    db.sequelize.query("SELECT Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, Users.id, Users.username, Users.pictureURL, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId=Posts.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId=Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Posts INNER JOIN Users ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId GROUP BY Posts.id ORDER BY CommentsNb DESC;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Posts.id AS postId, Posts.title, Posts.content, Posts.pictureURL, Posts.createdAt, Posts.updatedAt, Users.id, Users.username, Users.pictureURL, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, SUM(Likings.liking) AS Likes, (SELECT Likings.liking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.postId=Posts.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.postId=Posts.id) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId=Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Posts INNER JOIN Users ON Users.id=Posts.userId LEFT JOIN Likings ON Posts.id=Likings.postId GROUP BY Posts.id ORDER BY CommentsNb DESC;", {raw:true, replacements:{decodedUserId: decodedUserId}, type: sequelize.QueryTypes.SELECT})
     .then(posts => {
         posts.forEach(element => console.log(element.id));
         res.status(200).json(posts);
@@ -88,7 +68,7 @@ exports.getPopularPosts = (req, res, next) => {
 
 exports.readPost = (req, res, next) => {
     const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0];  
-    db.sequelize.query("SELECT Posts.id, Posts.userId, Posts.title, Posts.content, Posts.createdAt, Users.pictureURL AS profilePictureURL, Users.username, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId="+req.params.postId+") AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.postId="+req.params.postId+") AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId = Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Posts LEFT JOIN Likings ON Posts.id=Likings.postId INNER JOIN Users ON Users.id=Posts.userId WHERE Posts.id="+req.params.postId+" GROUP BY Posts.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Posts.id, Posts.userId, Posts.title, Posts.content, Posts.createdAt, Users.pictureURL AS profilePictureURL, Users.username, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.postId= :requestedId) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.postId= :requestedId) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.postId = Posts.id AND Comments.indentationLevel = 0) AS CommentsNb FROM Posts LEFT JOIN Likings ON Posts.id=Likings.postId INNER JOIN Users ON Users.id=Posts.userId WHERE Posts.id= :requestedId GROUP BY Posts.id;", {raw:true, replacements:{decodedUserId: decodedUserId, requestedId: req.params.postId}, type: sequelize.QueryTypes.SELECT})
     //db.Post.findOne({where :{ id: req.params.postId }})
     .then(Post => {
         res.status(200).json(Post);
@@ -230,27 +210,3 @@ exports.likePost = (req, res, next) => {
         }
     );
 };
-
-exports.getLikingsForAPost= (req, res, next) => {
-
-    return db.Liking.findAll({
-        where: {postId: req.params.postId}, 
-        attributes: [sequelize.fn('SUM', sequelize.col('liking')), sequelize.fn('SUM', sequelize.col('disliking'))],
-        raw: true                                                                                                                           
-    })         
-    .then((results) => {
-        console.log(results);
-        res.status(201).json(results)
-      })
-    .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
-};
-
-exports.doublejointure= (req, res, next) => {
-
-    db.Post.sequelize.query("SELECT Posts.id, userId, Users.username, title, content, Posts.createdAt, Posts.updatedAt, Users.roleId, Roles.updatePost FROM Posts INNER JOIN (Users INNER JOIN Roles ON Users.roleId=Roles.id) ON Posts.userId=Users.id WHERE Posts.id="+req.params.postId, {raw:true, type: sequelize.QueryTypes.SELECT})
-    .then((results) => {
-        res.status(201).json(results)
-      })
-    .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
-
-}

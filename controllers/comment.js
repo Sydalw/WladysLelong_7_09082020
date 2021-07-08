@@ -21,7 +21,7 @@ exports.getAllCommentsPerUser = (req, res, next) => {                           
 //recherche de tous les comments d'un post
 exports.getAllCommentsPerPost = (req, res, next) => {
     const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0];  
-    db.sequelize.query("SELECT Comments.id AS commentId,Users.id, Users.username, Users.pictureURL AS profilePictureURL, Comments.postId, Comments.relatedComment, Comments.deletionFlag,Comments.indentationLevel, Comments.content, Comments.createdAt, Comments.updatedAt,SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.commentId=Comments.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.commentId=Comments.id) AS myDislike, (SELECT COUNT(C3.id) FROM (SELECT C2.id, C2.postId, C2.userId, C2.relatedComment, C2.content, C2.deletionFlag, C2.indentationLevel, C2.createdAt, C2.updatedAt, C1.id AS C1_id, C1.relatedComment AS C1_rC, C1.content AS C1_c FROM Comments As C1 RIGHT OUTER JOIN Comments AS C2 ON C2.id=C1.relatedComment WHERE C2.postId="+req.params.postId+" AND C2.indentationLevel=0 AND C2.id=C1.relatedComment AND C2.id=Comments.id) AS C3) AS CommentsNb FROM Comments INNER JOIN Users ON Comments.userId=Users.id LEFT JOIN Likings ON Comments.id=Likings.commentId WHERE Comments.postId="+req.params.postId+" AND Comments.indentationLevel=0 GROUP BY Comments.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Comments.id AS commentId,Users.id, Users.username, Users.pictureURL AS profilePictureURL, Comments.postId, Comments.relatedComment, Comments.deletionFlag,Comments.indentationLevel, Comments.content, Comments.createdAt, Comments.updatedAt,SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.commentId=Comments.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.commentId=Comments.id) AS myDislike, (SELECT COUNT(C3.id) FROM (SELECT C2.id, C2.postId, C2.userId, C2.relatedComment, C2.content, C2.deletionFlag, C2.indentationLevel, C2.createdAt, C2.updatedAt, C1.id AS C1_id, C1.relatedComment AS C1_rC, C1.content AS C1_c FROM Comments As C1 RIGHT OUTER JOIN Comments AS C2 ON C2.id=C1.relatedComment WHERE C2.postId= :requestedId AND C2.indentationLevel=0 AND C2.id=C1.relatedComment AND C2.id=Comments.id) AS C3) AS CommentsNb FROM Comments INNER JOIN Users ON Comments.userId=Users.id LEFT JOIN Likings ON Comments.id=Likings.commentId WHERE Comments.postId= :requestedId AND Comments.indentationLevel=0 GROUP BY Comments.id;", {raw:true, replacements:{decodedUserId: decodedUserId, requestedId: req.params.postId}, type: sequelize.QueryTypes.SELECT})
     .then(comments => {
         comments.forEach(element => console.log(element.id));
         res.status(200).json(comments);
@@ -36,7 +36,7 @@ exports.getAllCommentsPerPost = (req, res, next) => {
 //recherche de tous les comments d'un commentaire
 exports.getAllCommentsPerComment = (req, res, next) => {
     const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0];  
-    db.sequelize.query("SELECT Comments.id AS commentId,Users.id, Users.username, Users.pictureURL AS profilePictureURL, Comments.postId, Comments.relatedComment, Comments.deletionFlag,Comments.indentationLevel, Comments.content, Comments.createdAt, Comments.updatedAt,SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.commentId=Comments.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.commentId=Comments.id) AS myDislike, (SELECT COUNT(C3.id) FROM (SELECT C2.id, C2.postId, C2.userId, C2.relatedComment, C2.content, C2.deletionFlag, C2.indentationLevel, C2.createdAt, C2.updatedAt, C1.id AS C1_id, C1.relatedComment AS C1_rC, C1.content AS C1_c FROM Comments As C1 RIGHT OUTER JOIN Comments AS C2 ON C2.id=C1.relatedComment WHERE C2.id=commentId AND C2.id=C1.relatedComment) AS C3) AS CommentsNb FROM Comments INNER JOIN Users ON Comments.userId=Users.id LEFT JOIN Likings ON Comments.id=Likings.commentId WHERE Comments.relatedComment="+req.params.commentId+" GROUP BY Comments.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Comments.id AS commentId,Users.id, Users.username, Users.pictureURL AS profilePictureURL, Comments.postId, Comments.relatedComment, Comments.deletionFlag,Comments.indentationLevel, Comments.content, Comments.createdAt, Comments.updatedAt,SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.commentId=Comments.id) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.commentId=Comments.id) AS myDislike, (SELECT COUNT(C3.id) FROM (SELECT C2.id, C2.postId, C2.userId, C2.relatedComment, C2.content, C2.deletionFlag, C2.indentationLevel, C2.createdAt, C2.updatedAt, C1.id AS C1_id, C1.relatedComment AS C1_rC, C1.content AS C1_c FROM Comments As C1 RIGHT OUTER JOIN Comments AS C2 ON C2.id=C1.relatedComment WHERE C2.id=commentId AND C2.id=C1.relatedComment) AS C3) AS CommentsNb FROM Comments INNER JOIN Users ON Comments.userId=Users.id LEFT JOIN Likings ON Comments.id=Likings.commentId WHERE Comments.relatedComment= :requestedId GROUP BY Comments.id;", {raw:true, replacements:{decodedUserId: decodedUserId, requestedId: req.params.commentId}, type: sequelize.QueryTypes.SELECT})
     .then(comments => {
         comments.forEach(element => console.log(element.id));
         res.status(200).json(comments);
@@ -50,7 +50,7 @@ exports.getAllCommentsPerComment = (req, res, next) => {
 
 exports.readComment = (req, res, next) => {
     const decodedUserId = (req.headers.authorization.split(' ')[1]).split(':')[0];  
-    db.sequelize.query("SELECT Comments.id, Comments.userId, Comments.content, Comments.createdAt, Users.pictureURL AS profilePictureURL, Users.username, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.commentId="+req.params.commentId+") AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId="+decodedUserId+" AND Likings.commentId="+req.params.commentId+") AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.relatedComment = Comments.id) AS CommentsNb FROM Comments LEFT JOIN Likings ON Comments.id=Likings.commentId INNER JOIN Users ON Users.id=Comments.userId WHERE Comments.id="+req.params.commentId+" GROUP BY Comments.id;", {raw:true, type: sequelize.QueryTypes.SELECT})
+    db.sequelize.query("SELECT Comments.id, Comments.userId, Comments.content, Comments.createdAt, Users.pictureURL AS profilePictureURL, Users.username, SUM(Likings.liking) AS Likes, SUM(Likings.disliking) AS Dislikes, (SELECT Likings.liking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.commentId= :requestedId) AS myLike, (SELECT Likings.disliking FROM Likings WHERE Likings.userId= :decodedUserId AND Likings.commentId= :requestedId) AS myDislike, (SELECT COUNT(Comments.id) FROM Comments WHERE Comments.relatedComment = Comments.id) AS CommentsNb FROM Comments LEFT JOIN Likings ON Comments.id=Likings.commentId INNER JOIN Users ON Users.id=Comments.userId WHERE Comments.id= :requestedId GROUP BY Comments.id;", {raw:true, replacements:{decodedUserId: decodedUserId, requestedId: req.params.commentId}, type: sequelize.QueryTypes.SELECT})
     //db.Post.findOne({where :{ id: req.params.postId }})
     .then(Post => {
         res.status(200).json(Post);
@@ -179,38 +179,6 @@ exports.deleteComment = (req, res, next) => {
     .catch(error => res.status(501).json({ error }));
 };
 
-// exports.likeComment = (req, res, next) => {                                                 //TODO il faut empecher le like d'un commentaire supprimé
-//     const likingInput = req.body.liking;
-//         switch (likingInput) {
-//             case 1:
-//                 db.Liking.create({
-//                     commentId: req.params.commentId,
-//                     userId: req.body.id,
-//                     liking: true,
-//                     disliking: false
-//                 })
-//                 .then(res.status(201).json({ message: 'Like enregistré !' }))          
-//                 .catch(res.status(401).json({ message: 'Like non enregistré !' }));
-//                 break;
-//             case 0:
-//                 db.Liking.destroy(
-//                     {where: {commentId: req.params.commentId, userId: req.body.id}}
-//                 ).then(res.status(201).json({ message: 'Annulation enregistrée !' }))  
-//                 //traitement terminé...
-//                 .catch(res.status(401).json({ message: 'Une erreur est apparue !' }));
-//                 break;
-//             case -1:
-//                 db.Liking.create({
-//                     commentId: req.params.commentId,
-//                     userId: req.body.id,
-//                     disliking: true,
-//                     liking: false
-//                 })
-//                 .then(res.status(201).json({ message: 'Dislike enregistré !' }))          
-//                 .catch(res.status(401).json({ message: 'Dislike non enregistré !' }));
-//         }
-// };
-
 exports.likeComment = (req, res, next) => {
     const likingInput = req.body.liking;
     let userLike = 0
@@ -264,14 +232,4 @@ exports.likeComment = (req, res, next) => {
         }
         }
     );
-};
-
-exports.getLikingsForAComment= (req, res, next) => {
-
-    db.Role.sequelize.query("SELECT SUM(liking) as Likes, SUM(disliking) as Dislikes FROM Likings WHERE commentId="+req.params.commentId)
-    .then(([results, metadata]) => {
-        res.status(201).json(results)
-      })
-    .catch((error) => res.status(401).json({ message: 'Une erreur est apparue !', error }));
-    
 };

@@ -12,8 +12,6 @@ router.post('/post', auth, postCtrl.createPost);
 router.put('/post/:postId', auth, postCtrl.updatePost);
 router.delete('/post/:postId', auth, postCtrl.deletePost);
 router.post('/post/:postId/liking', auth, postCtrl.likePost);
-router.get('/post/:postId/likings', auth, postCtrl.getLikingsForAPost);
 
-router.get('/post/:postId/doublejointure', auth, postCtrl.doublejointure);
 
 module.exports = router;
