@@ -18,7 +18,7 @@ console when the server starts, e.g. `Listening on port 3001`.
 
 ### .env setup ###
 
-a file named `.env example` is included in this repo. Three variables are included in this file, you will need to set them up and rename your file in `.env` on your local project folder
-The `key_value_token` is necessary to build the json web token used to authentificate the user session
-The `MySQLdb_USER` variable is used to access your local MySQL database with the login of your choice
-The `MySQLdb_PASSWORD` variable is the password to your local MySQL database linked to the login of your choice
+a file named `.env example` is included in this repo. Three variables are included in this file, you will need to set them up and rename your file in `.env` on your local project folder. 
+The `key_value_token` is necessary to build the json web token used to authentificate the user session. 
+The `MySQLdb_USER` variable is used to access your local MySQL database with the login of your choice. 
+The `MySQLdb_PASSWORD` variable is the password to your local MySQL database linked to the login of your choice. 
